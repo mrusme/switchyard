@@ -6,8 +6,6 @@ GOOS := $(shell go env GOOS)
 GOARCH := $(shell go env GOARCH)
 
 NAME := switchyard
-PREFIX := xn--gckvb8fzb.com/
-PROJECT := $(PREFIX)$(NAME)
 VERSION := $(shell git describe --tags 2>/dev/null || echo "dev")
 COMMIT := $(shell git rev-parse --verify HEAD 2>/dev/null || echo "none")
 DATE := $(shell date)
@@ -25,4 +23,4 @@ build: ## build
 	@echo "VERSION = $(VERSION)"
 	@echo "COMMIT  = $(COMMIT)"
 	@echo "DATE    = $(DATE)"
-	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags "-s -w -X \"${PROJECT}/runtime.Version=${VERSION}\" -X \"${PROJECT}/runtime.Commit=${COMMIT}\" -X \"${PROJECT}/runtime.Date=${DATE}\"" -o $(PWD)/build/$(NAME)
+	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags "-s -w -X \"main.Version=${VERSION}\" -X \"main.Commit=${COMMIT}\" -X \"main.Date=${DATE}\"" -o $(PWD)/build/$(NAME)
