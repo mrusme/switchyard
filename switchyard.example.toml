@@ -1,0 +1,71 @@
+# Example switchyard configuration. Copy this to /etc/switchyard.toml, or point
+# at it with -c "file:///path/to/switchyard.toml". The SWITCHYARD_CONFIG
+# environment variable overrides the default path.
+
+[General]
+# Either development or production.
+# Development turns on protocol tracing in the XMPP client.
+Mode = "production"
+
+[Logging]
+# debug, info, warn, error.
+Level = "info"
+
+# Valkey or Redis for asynq job queue.
+[Redis]
+# A single address for a simple client or kist several addresses for a cluster
+# client.
+Addresses = ["127.0.0.1:6379"]
+Database = 0
+Username = ""
+Password = ""
+Poolsize = 10
+# Set MasterName for a Sentinel failover client.
+MasterName = ""
+
+[SMTP]
+# Greeting hostname the server announces.
+Domain = "switchyard.local"
+
+# Source addresses permitted to submit.
+# Plain IPs and CIDR ranges are both accepted.
+# An empty list accepts submissions from any address, which is ALMOST NEVER
+# what you want.
+AllowedIPs = ["127.0.0.1/32", "::1/128"]
+
+# Credentials for submitting, not tied to any real mailbox. Leave Username empty
+# to disable auth and rely on AllowedIPs alone.
+Username = "forgejo"
+Password = "change-me"
+
+ReadTimeout = "30s"
+WriteTimeout = "30s"
+MaxMessageBytes = 26214400
+MaxRecipients = 50
+
+# Port 465 is implicit TLS.
+# Port 587 is plaintext with STARTTLS (once TLS is enabled below).
+SMTPSAddress = ":465"
+SubmissionAddress = ":587"
+
+[SMTP.TLS]
+# When disabled, implicit-TLS listener on :465 is skipped and :587 serves
+# plaintext with AUTH allowed in the clear. Enable it in production unless
+# AllowedIPs is "127.0.0.1/32".
+Enable = false
+Cert = "/etc/switchyard/tls/cert.pem"
+Key = "/etc/switchyard/tls/key.pem"
+
+# XMPP account switchyard connects to at startup and sends every
+# forwarded message from.
+[XMPP]
+Server = "xmpp.example.com:5222"
+Username = "switchyard@example.com"
+Password = "change-me"
+# Leave DirectTLS off for a normal c2s port such as 5222, where the connection
+# starts in plaintext and upgrades to TLS with STARTTLS. Set it to true for a
+# direct-TLS port such as 5223, where TLS is negotiated from the first byte.
+DirectTLS = false
+# Only ever for a local test server with a self-signed certificate.
+InsecureSkipVerify = false
+Status = "chat"
