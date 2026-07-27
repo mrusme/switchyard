@@ -9,7 +9,6 @@ require (
 	github.com/hibiken/asynq v0.26.0
 	github.com/xmppo/go-xmpp v0.3.7
 	golang.org/x/net v0.57.0
-	xn--gckvb8fzb.com/glides v0.0.0
 )
 
 require (
@@ -51,6 +50,7 @@ require (
 	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
+	xn--gckvb8fzb.com/glides v0.0.0-20260726203307-d8ab6000f0d6 // indirect
 )
 
-replace xn--gckvb8fzb.com/glides => ../glides
+//replace xn--gckvb8fzb.com/glides => ../glides
