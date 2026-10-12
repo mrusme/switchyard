@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"syscall"
 
 	"xn--gckvb8fzb.com/glides/runtime"
+	glidesdispatch "xn--gckvb8fzb.com/glides/services/dispatch"
 	"xn--gckvb8fzb.com/switchyard/services/dispatch"
 	"xn--gckvb8fzb.com/switchyard/smtp"
 	"xn--gckvb8fzb.com/switchyard/worker"
@@ -57,11 +59,13 @@ func main() {
 		Version: Version,
 		Commit:  Commit,
 		Date:    Date,
-		Services: runtime.Services{
-			Dispatch: true,
-		},
 	})
 	if err != nil {
+		fmt.Printf("%s\n", err)
+		os.Exit(1)
+	}
+
+	if _, err = glidesdispatch.Register(rt); err != nil {
 		fmt.Printf("%s\n", err)
 		os.Exit(1)
 	}
@@ -69,32 +73,24 @@ func main() {
 	err = rt.Startup()
 	rt.NilOrDie(err)
 
-	// ---[ XMPP ]------------------------------------------------------------- //
 	xmp, err := xmpp.New(rt)
 	rt.NilOrDie(err)
-	rt.NilOrDie(xmp.Run())
 
-	// ---[ DISPATCH ]--------------------------------------------------------- //
 	disp, err := dispatch.New(rt)
 	rt.NilOrDie(err)
 
-	// ---[ WORKER ]----------------------------------------------------------- //
 	wrk, err := worker.New(rt, xmp)
 	rt.NilOrDie(err)
-	go wrk.Run()
 
-	// ---[ SMTP ]------------------------------------------------------------- //
 	srv, err := smtp.New(rt, disp)
 	rt.NilOrDie(err)
-	go srv.Run()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	srv.Shutdown()
-	wrk.Shutdown()
-	xmp.Shutdown()
+	if err = rt.Serve(ctx, xmp, wrk, srv); err != nil {
+		rt.Exit(1)
+	}
 
 	rt.Exit(0)
 }

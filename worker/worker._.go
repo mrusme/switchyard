@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/hibiken/asynq"
+	glideserrs "xn--gckvb8fzb.com/glides/errs"
 	"xn--gckvb8fzb.com/glides/runtime"
 	glidesconfig "xn--gckvb8fzb.com/glides/services/config"
 	glidesdispatch "xn--gckvb8fzb.com/glides/services/dispatch"
@@ -25,21 +27,25 @@ type Worker struct {
 	redisCfg glidesconfig.Redis
 	as       *asynq.Server
 	asMux    *asynq.ServeMux
+
+	stop     chan struct{}
+	stopOnce sync.Once
 }
 
 func New(rt *runtime.Runtime, sender Sender) (wrk *Worker, err error) {
 	wrk = new(Worker)
 	wrk.rt = rt
 	wrk.sender = sender
-
-	if wrk.redisCfg, err = rt.Config().Redis(); err != nil {
-		return nil, err
-	}
+	wrk.stop = make(chan struct{})
 
 	return wrk, nil
 }
 
-func (wrk *Worker) Run() (err error) {
+func (wrk *Worker) Startup() (err error) {
+	if wrk.redisCfg, err = wrk.rt.Config().Redis(); err != nil {
+		return err
+	}
+
 	wrk.as = asynq.NewServer(
 		glidesdispatch.RedisConnOpt(wrk.redisCfg),
 		asynq.Config{
@@ -51,13 +57,30 @@ func (wrk *Worker) Run() (err error) {
 	wrk.asMux = asynq.NewServeMux()
 	wrk.asMux.HandleFunc(glidesdispatch.TaskJob, wrk.HandleJob)
 
-	return wrk.as.Run(wrk.asMux)
+	return nil
+}
+
+func (wrk *Worker) Run() (err error) {
+	if wrk.as == nil {
+		return fmt.Errorf("%w: worker was not started", glideserrs.ErrProcessState)
+	}
+
+	if err = wrk.as.Start(wrk.asMux); err != nil {
+		return err
+	}
+
+	<-wrk.stop
+
+	return nil
 }
 
 func (wrk *Worker) Shutdown() error {
+	wrk.stopOnce.Do(func() { close(wrk.stop) })
+
 	if wrk.as != nil {
 		wrk.as.Shutdown()
 	}
+
 	return nil
 }
 

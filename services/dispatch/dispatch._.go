@@ -1,6 +1,9 @@
 package dispatch
 
 import (
+	"fmt"
+
+	glideserrs "xn--gckvb8fzb.com/glides/errs"
 	"xn--gckvb8fzb.com/glides/runtime"
 	glidesdispatch "xn--gckvb8fzb.com/glides/services/dispatch"
 )
@@ -15,7 +18,9 @@ func New(rt *runtime.Runtime) (disp *Dispatch, err error) {
 	disp = new(Dispatch)
 
 	disp.rt = rt
-	disp.Dispatch = rt.Dispatch()
+	if disp.Dispatch = glidesdispatch.From(rt); disp.Dispatch == nil {
+		return nil, fmt.Errorf("%w: %s", glideserrs.ErrServiceNotFound, glidesdispatch.ServiceID)
+	}
 
 	return disp, nil
 }

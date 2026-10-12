@@ -52,5 +52,3 @@ require (
 	google.golang.org/protobuf v1.36.10 // indirect
 	xn--gckvb8fzb.com/glides v0.0.0-20260726203307-d8ab6000f0d6 // indirect
 )
-
-//replace xn--gckvb8fzb.com/glides => ../glides

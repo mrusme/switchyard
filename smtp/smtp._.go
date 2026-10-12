@@ -2,6 +2,7 @@ package smtp
 
 import (
 	"crypto/tls"
+	"errors"
 	"net"
 	"strings"
 	"time"
@@ -91,6 +92,10 @@ func (s *Server) newServer(
 	return srv
 }
 
+func (s *Server) Startup() error {
+	return nil
+}
+
 func (s *Server) Run() error {
 	errCh := make(chan error, len(s.listeners))
 
@@ -104,6 +109,9 @@ func (s *Server) Run() error {
 				err = l.srv.ListenAndServeTLS()
 			} else {
 				err = l.srv.ListenAndServe()
+			}
+			if errors.Is(err, smtp.ErrServerClosed) {
+				err = nil
 			}
 			if err != nil {
 				s.rt.Error("status", "listener stopped",

@@ -25,6 +25,6 @@ type SMTP struct {
 }
 
 func GetSMTP(cfg *glidesconfig.Config) (s SMTP, err error) {
-	_, err = cfg.Unmarshal("SMTP", &s)
+	err = cfg.Unmarshal("SMTP", &s)
 	return s, err
 }

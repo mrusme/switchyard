@@ -14,6 +14,6 @@ type XMPP struct {
 }
 
 func GetXMPP(cfg *glidesconfig.Config) (x XMPP, err error) {
-	_, err = cfg.Unmarshal("XMPP", &x)
+	err = cfg.Unmarshal("XMPP", &x)
 	return x, err
 }

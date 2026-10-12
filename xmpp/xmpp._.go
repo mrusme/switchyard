@@ -17,11 +17,15 @@ type XMPP struct {
 
 	mu     sync.Mutex
 	client *goxmpp.Client
+
+	stop     chan struct{}
+	stopOnce sync.Once
 }
 
 func New(rt *runtime.Runtime) (*XMPP, error) {
 	t := new(XMPP)
 	t.rt = rt
+	t.stop = make(chan struct{})
 
 	cfg, err := config.GetXMPP(rt.Config())
 	if err != nil {
@@ -54,7 +58,7 @@ func New(rt *runtime.Runtime) (*XMPP, error) {
 	return t, nil
 }
 
-func (t *XMPP) Run() error {
+func (t *XMPP) Startup() error {
 	t.rt.Info("status", "connecting", "host", t.opts.Host)
 
 	t.mu.Lock()
@@ -68,8 +72,16 @@ func (t *XMPP) Run() error {
 	return nil
 }
 
+func (t *XMPP) Run() error {
+	<-t.stop
+
+	return nil
+}
+
 func (t *XMPP) Shutdown() error {
 	t.rt.Info("status", "shutdown")
+
+	t.stopOnce.Do(func() { close(t.stop) })
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
