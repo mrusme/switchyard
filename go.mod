@@ -9,7 +9,7 @@ require (
 	github.com/hibiken/asynq v0.26.0
 	github.com/xmppo/go-xmpp v0.3.7
 	golang.org/x/net v0.60.0
-	xn--gckvb8fzb.com/glides v0.1.0
+	xn--gckvb8fzb.com/glides v0.2.0
 )
 
 require (
