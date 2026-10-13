@@ -1,11 +1,9 @@
 package xmpp
 
 import (
-	"crypto/tls"
-	"strings"
 	"sync"
 
-	goxmpp "github.com/xmppo/go-xmpp"
+	"xn--gckvb8fzb.com/glides/helpers/xmppclient"
 	"xn--gckvb8fzb.com/glides/runtime"
 	"xn--gckvb8fzb.com/switchyard/errs"
 	"xn--gckvb8fzb.com/switchyard/services/config"
@@ -13,10 +11,11 @@ import (
 
 type XMPP struct {
 	rt   *runtime.Runtime
-	opts goxmpp.Options
+	opts xmppclient.Options
 
-	mu     sync.Mutex
-	client *goxmpp.Client
+	mu        sync.Mutex
+	client    *xmppclient.Client
+	onMessage func(xmppclient.Message)
 
 	stop     chan struct{}
 	stopOnce sync.Once
@@ -35,27 +34,26 @@ func New(rt *runtime.Runtime) (*XMPP, error) {
 		return nil, errs.ErrXMPPServerRequired
 	}
 
-	status := cfg.Status
-	if status == "" {
-		status = "chat"
-	}
-
-	t.opts = goxmpp.Options{
-		Host:     cfg.Server,
-		User:     cfg.Username,
-		Password: cfg.Password,
-		NoTLS:    !cfg.DirectTLS,
-		StartTLS: !cfg.DirectTLS,
-		TLSConfig: &tls.Config{
-			ServerName:         strings.Split(cfg.Server, ":")[0],
-			InsecureSkipVerify: cfg.InsecureSkipVerify,
-		},
-		Session:             true,
-		Status:              status,
-		PeriodicServerPings: true,
+	t.opts = xmppclient.Options{
+		Host:               cfg.Server,
+		User:               cfg.Username,
+		Password:           cfg.Password,
+		DirectTLS:          cfg.DirectTLS,
+		InsecureSkipVerify: cfg.InsecureSkipVerify,
+		Status:             cfg.Status,
 	}
 
 	return t, nil
+}
+
+func (t *XMPP) OnMessage(fn func(xmppclient.Message)) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	t.onMessage = fn
+	if t.client != nil {
+		t.client.SetOnMessage(fn)
+	}
 }
 
 func (t *XMPP) Startup() error {
@@ -64,7 +62,7 @@ func (t *XMPP) Startup() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	if err := t.reconnect(); err != nil {
+	if err := t.connect(); err != nil {
 		t.rt.Error("status", "connect failed, will retry on first send",
 			"host", t.opts.Host, "error", err)
 	}
@@ -86,11 +84,9 @@ func (t *XMPP) Shutdown() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	if t.client == nil {
-		return nil
-	}
+	t.disconnect()
 
-	return t.disconnect()
+	return nil
 }
 
 func (t *XMPP) Send(to, body string) (err error) {
@@ -101,11 +97,7 @@ func (t *XMPP) Send(to, body string) (err error) {
 		return err
 	}
 
-	if _, err = t.client.Send(goxmpp.Chat{
-		Remote: to,
-		Type:   "chat",
-		Text:   body,
-	}); err != nil {
+	if err = t.client.Send(to, body); err != nil {
 		t.rt.Error("status", "send failed", "to", to, "error", err)
 		return err
 	}
@@ -116,29 +108,31 @@ func (t *XMPP) Send(to, body string) (err error) {
 }
 
 func (t *XMPP) ensureConnected() error {
-	if t.client == nil {
-		return t.reconnect()
+	if t.client != nil {
+		select {
+		case <-t.client.Done():
+			t.rt.Info("status", "connection ended, reconnecting", "host", t.opts.Host)
+		default:
+			err := t.client.Ping()
+			if err == nil {
+				return nil
+			}
+			t.rt.Error("status", "ping failed, reconnecting", "error", err)
+		}
+
+		t.disconnect()
 	}
 
-	if _, err := t.client.SendKeepAlive(); err != nil {
-		t.rt.Error("status", "keepalive failed, reconnecting", "error", err)
-		return t.reconnect()
-	}
-
-	return nil
+	return t.connect()
 }
 
-func (t *XMPP) reconnect() (err error) {
-	if t.client != nil {
-		if err = t.disconnect(); err != nil {
-			return err
-		}
-	}
-
+func (t *XMPP) connect() (err error) {
 	t.rt.Debug("status", "dialing", "host", t.opts.Host)
 
-	t.client, err = t.opts.NewClient()
-	if err != nil {
+	opts := t.opts
+	opts.OnMessage = t.onMessage
+
+	if t.client, err = xmppclient.Dial(t.rt.Logger(), opts); err != nil {
 		t.client = nil
 		return err
 	}
@@ -146,11 +140,11 @@ func (t *XMPP) reconnect() (err error) {
 	return nil
 }
 
-func (t *XMPP) disconnect() error {
-	if err := t.client.Close(); err != nil {
-		t.rt.Debug("status", "close error", "error", err)
+func (t *XMPP) disconnect() {
+	if t.client == nil {
+		return
 	}
-	t.client = nil
 
-	return nil
+	t.client.Close()
+	t.client = nil
 }
