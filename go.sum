@@ -103,5 +103,5 @@ golang.org/x/tools v0.6.0/go.mod h1:Xwgl3UAJ/d3gWutnCtw505GrjyAbvKui8lOU390QaIU=
 golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 google.golang.org/protobuf v1.36.12 h1:pJOKDDOyeXErUroCihFAd5LQuwXBSpVnKGrj5o/fwxc=
 google.golang.org/protobuf v1.36.12/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
-xn--gckvb8fzb.com/glides v0.2.0 h1:kaoyqkmmql0lrlRrUKSqvW2N+sOQs/KA+rPER9zrgUs=
-xn--gckvb8fzb.com/glides v0.2.0/go.mod h1:oC4mpeOkCduCIpMgTGfnBBz0VNUQhenEbHZG3P/N5Ss=
+xn--gckvb8fzb.com/glides v0.2.1 h1:5HV5PKpD9TNxfE2KgeRCFNqXLGVJwFzuUgB+RYHbmfk=
+xn--gckvb8fzb.com/glides v0.2.1/go.mod h1:oC4mpeOkCduCIpMgTGfnBBz0VNUQhenEbHZG3P/N5Ss=

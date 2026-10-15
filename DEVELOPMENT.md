@@ -1,12 +1,11 @@
 # Development
 
-Switchyard needs two services to run, a _Valkey_ (or _Redis_) server for the
-_asynq_ queue, and an XMPP server to deliver to. For local work both run under
-_podman_.
+Switchyard needs two services to run, a Valkey (or Redis) server for the asynq
+queue, and an XMPP server to deliver to. For local work both run under podman.
 
 ## Valkey
 
-The job queue uses this server, and any _Redis_-compatible server will do.
+The job queue uses this server, and any Redis-compatible server will do.
 
 ```sh
 podman run -d --name valkey \
@@ -16,8 +15,8 @@ podman run -d --name valkey \
 
 ## Prosody
 
-Switchyard connects to XMPP over _StartTLS_, so _Prosody_ needs a certificate
-even on loopback. A self-signed one is enough as long as the config sets
+Switchyard connects to XMPP over StartTLS, so Prosody needs a certificate even
+on loopback. A self-signed one is enough as long as the config sets
 `insecure_skip_verify = true`.
 
 > **Warning:** `insecure_skip_verify = true` turns off certificate verification,
@@ -84,8 +83,8 @@ make build
 
 ## Verifying delivery
 
-Send a mail to `alice@localhost` with e.g. a small _Python_ client over
-_STARTTLS_ on port 587:
+Send a mail to `alice@localhost` with e.g. a small Python client over STARTTLS
+on port 587:
 
 ```sh
 python3 - <<'EOF'
@@ -110,10 +109,16 @@ With TLS enabled, use `smtplib.SMTP_SSL("127.0.0.1", 465)` for the implicit-TLS
 listener instead, trusting the self-signed certificate as needed.
 
 To confirm receipt, connect as `alice@localhost` with any XMPP client and read
-the incoming chat, or, since `alice` is offline, let _Prosody_ store it and
-fetch it on the next login. The body carries the `From`, `Subject` and text,
-with the confirmation link intact.
+the incoming chat, or, since `alice` is offline, let Prosody store it and fetch
+it on the next login. The body carries the `From`, `Subject` and text, with the
+confirmation link intact.
 
-Stopping _Prosody_ before sending a mail shows the retry path where Switchyard
+Stopping Prosody before sending a mail shows the retry path where Switchyard
 accepts the submission, the job stays on the queue, and delivery goes through
-once _Prosody_ is back.
+once Prosody is back.
+
+Switchyard keeps one XMPP connection open through glides' `helpers/xmppclient`,
+which reads from it, pings it every 60 seconds while idle and before each
+delivery, and reconnects at the next delivery when a ping goes unanswered or the
+server closed the stream. A message the server rejects, such as one to a JID
+that doesn't exist, is logged at warn with the condition.
